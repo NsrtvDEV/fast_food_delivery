@@ -64,14 +64,23 @@ async def create_notification(
 
 
 @router.get("/user/{user_id}", response_model=List[NotificationReadResponse])
-async def get_user_notifications(user_id: int, session: db_dep):
+async def get_user_notifications(
+    user_id: int, session: db_dep, current_user: current_user_dep
+):
+    if user_id != current_user.id and not (
+        current_user.is_staff or current_user.is_superuser
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     stmt = select(Notification).where(Notification.user_id == user_id)
     notifications = session.execute(stmt).scalars().all()
     return notifications
 
 
 @router.put("/{notification_id}/read", response_model=NotificationReadResponse)
-async def mark_notification_read(notification_id: int, session: db_dep):
+async def mark_notification_read(
+    notification_id: int, session: db_dep, current_user: current_user_dep
+):
     notification = (
         session.execute(select(Notification).where(Notification.id == notification_id))
         .scalars()
@@ -79,6 +88,12 @@ async def mark_notification_read(notification_id: int, session: db_dep):
     )
     if not notification:
         raise HTTPException(status_code=404, detail="Notification not found")
+
+    if notification.user_id != current_user.id and not (
+        current_user.is_staff or current_user.is_superuser
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     notification.is_read = True
     session.commit()
     session.refresh(notification)

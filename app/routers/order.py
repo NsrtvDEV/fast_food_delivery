@@ -13,14 +13,14 @@ from app.models import (
     CartItem,
     Address,
     Delivery,
-    OrderStatusTransition
+    OrderStatusTransition,
 )
 from app.database import db_dep
 from app.schemas.order import (
     OrderListResponse,
     OrederCreateRequest,
     OrderCreateResponse,
-    OrderTransitionRequest
+    OrderTransitionRequest,
 )
 from app.dependencies import current_user_dep
 from app.utils import calculate_discounted_price
@@ -46,12 +46,17 @@ async def list_order(session: db_dep, current_user: current_user_dep):
 
 
 @router.get("/{order_id}", response_model=OrderListResponse)
-async def get_order(session: db_dep, order_id: int):
-    stmt = select(Order).where(Order.id == order_id)
+async def get_order(session: db_dep, order_id: int, current_user: current_user_dep):
+    stmt = select(Order).where(
+        Order.id == order_id, Order.user_id == current_user.id
+    )
     res = session.execute(stmt)
-    product = res.scalars().first()
+    order = res.scalars().first()
 
-    return product
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    return order
 
 
 @router.post("/create", response_model=OrderCreateResponse)
@@ -85,7 +90,7 @@ async def create_order(
         user_id=current_user.id,
         address_id=address.id,
         branch_id=create_data.branch_id,
-        status=OrderStatus.CREATED.value  
+        status=OrderStatus.CREATED.value,
     )
     session.add(order)
     session.flush()
@@ -123,7 +128,7 @@ async def create_order(
         if code.max_uses is not None and code.used_count >= code.max_uses:
             raise HTTPException(status_code=400, detail="Promocode exhausted")
 
-        discount_amount = total * code.discount_percentage / 100
+        discount_amount = round(total * code.discount_percentage / 100)
         total -= discount_amount
         code.used_count += 1
         order.promocode_id = code.id
@@ -153,15 +158,23 @@ async def create_order(
     return order
 
 
-@router.post("order/transitions")
-async def order_transition(session: db_dep, order_id : int, create_data: OrderTransitionRequest):
+@router.post("/{order_id}/transitions")
+async def order_transition(
+    session: db_dep,
+    order_id: int,
+    create_data: OrderTransitionRequest,
+    current_user: current_user_dep,
+):
+    if not (current_user.is_staff or current_user.is_superuser):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     stmt = select(Order).where(Order.id == order_id)
     order = session.execute(stmt).scalars().first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
     current_status = OrderStatus(order.status)
-    new_status = create_data.status
+    new_status = create_data.to_status
 
     if new_status not in valid_transitions.get(current_status, []):
         raise HTTPException(
@@ -169,22 +182,17 @@ async def order_transition(session: db_dep, order_id : int, create_data: OrderTr
             detail=f"Cannot change status from {current_status.value} to {new_status.value}",
         )
 
-    order.status = new_status.value
-
-    session.commit()
-
- 
     transition = OrderStatusTransition(
-        from_status=order.status,
-        to_status=create_data.to_status,
-        created_at=create_data.utcnow(),
+        order_id=order_id,
+        from_status=current_status.value,
+        to_status=new_status.value,
+        created_at=datetime.utcnow(),
     )
-    order.status = create_data.to_status
-    order.updated_at = datetime.utcnow()
- 
     session.add(transition)
+
+    order.status = new_status.value
+    order.updated_at = datetime.utcnow()
+
     session.commit()
     session.refresh(transition)
     return transition
-    
-

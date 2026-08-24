@@ -25,8 +25,13 @@ class Settings(BaseSettings):
     EMAIL_ADDRESS: str = "nsrtv123@gmail.com"
     SMTP_SERVER: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    EMAIL_PASSWORD: str = "1234"
+    EMAIL_PASSWORD: str
     REDIS_URL: str = "redis://localhost:6379/4"
+
+    SETUP_TOKEN: str | None = None
+
+    TELEGRAM_TOKEN: str | None = None
+    TELEGRAM_WEBHOOK_SECRET: str | None = None
 
     class Config:
         env_file = ".env"

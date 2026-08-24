@@ -19,7 +19,9 @@ async def apply_for_courier(
     current_user: current_user_dep,
 ):
 
-    stmt = select(CourierApplication).where(CourierApplication.user_id == current_user.id)
+    stmt = select(CourierApplication).where(
+        CourierApplication.user_id == current_user.id
+    )
     existng = session.execute(stmt).scalars().first()
 
     if existng:

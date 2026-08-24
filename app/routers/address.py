@@ -19,15 +19,19 @@ geolocator = Nominatim(user_agent="fast_food")
 
 
 @router.get("/location/{address_id}", response_model=AddressListResponse)
-async def get_location(session: db_dep, address_id: int):
-    stmt = select(Address).where(Address.id == address_id)
+async def get_location(
+    session: db_dep, address_id: int, current_user: current_user_dep
+):
+    stmt = select(Address).where(
+        Address.id == address_id, Address.user_id == current_user.id
+    )
     address = session.execute(stmt).scalars().first()
 
     if not address:
         raise HTTPException(status_code=404, detail="address not found")
 
     return address
-
+    
 
 @router.post("/create", response_model=AddressCreatResponse)
 async def create_address(
@@ -54,7 +58,7 @@ async def create_address(
     return address
 
 
-@router.put("update/{address_id}")
+@router.put("/update/{address_id}")
 async def update_address(
     session: db_dep,
     address_id: int,
@@ -66,14 +70,17 @@ async def update_address(
         raise HTTPException(status_code=403, detail="Not authorized to update category")
 
     stmt = select(Address).where(Address.id == address_id)
-    address = session.execute(stmt).scalars().all()
+    address = session.execute(stmt).scalars().first()
+
+    if not address:
+        raise HTTPException(status_code=404, detail="Address not found")
 
     if update_data.location_name:
-        location_name = update_data.location_name
+        address.location_name = update_data.location_name
     if update_data.latitude:
-        latitude = update_data.latitude
+        address.latitude = update_data.latitude
     if update_data.longitude:
-        longitude = update_data.longitude
+        address.longitude = update_data.longitude
 
     session.commit()
     session.refresh(address)

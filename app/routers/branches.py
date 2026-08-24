@@ -55,10 +55,11 @@ async def update_branch(
     if not brnch:
         raise HTTPException(status_code=404, detail="Branch not found")
 
-    if brnch:
-        brnch.id = (request.id,)
-        brnch.address = (request.address,)
-        brnch.branch_phone = (request.phone,)
+    if request.address is not None:
+        brnch.address = request.address
+    if request.phone is not None:
+        brnch.branch_phone = request.phone
+    if request.working_hours is not None:
         brnch.working_hours = request.working_hours
 
     db.commit()

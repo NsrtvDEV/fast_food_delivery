@@ -13,7 +13,7 @@ class OrderStatus(str, Enum):
 
 class UpdateStatusRequest(BaseModel):
     status: OrderStatus
-    reason: str | None = None 
+    reason: str | None = None
 
 
 class DeliveryUpdateRequest(BaseModel):

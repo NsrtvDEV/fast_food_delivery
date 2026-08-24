@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException, UploadFile, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy import select
@@ -83,13 +85,14 @@ async def create_product(
 
     path = Path(settings.MEDIA_PATH)
     path.mkdir(exist_ok=True)
-    res = path / image.filename
+    safe_filename = f"{uuid.uuid4().hex}{Path(image.filename).suffix}"
+    res = path / safe_filename
     try:
         with open(res, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
 
         image_obj = Image(
-            url=f"{settings.MEDIA_PATH}/{image.filename}",
+            url=f"{settings.MEDIA_PATH}/{safe_filename}",
         )
 
         session.add(image_obj)
@@ -113,7 +116,7 @@ async def create_product(
     except Exception:
         if res.exists():
             res.unlink()
-        await session.rollback()
+        session.rollback()
         raise HTTPException(status_code=500, detail="Failed to create product")
 
 
@@ -137,12 +140,14 @@ async def update_product(
         product.category_id = update_data.category_id
     if update_data.image_id:
         product.image_id = update_data.image_id
-    if update_data.product.name:
+    if update_data.name:
         product.name = update_data.name
-    if update_data.product.description:
+    if update_data.description:
         product.description = update_data.description
-    if update_data.product.price:
+    if update_data.price:
         product.price = update_data.price
+    if update_data.is_active is not None:
+        product.is_active = update_data.is_active
 
     session.commit()
     session.refresh(product)
@@ -168,3 +173,5 @@ async def delete_product(
 
     session.commit()
     session.refresh(product)
+
+

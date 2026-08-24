@@ -16,8 +16,12 @@ router = APIRouter(prefix="/promocodes", tags=["Promocodes"])
 
 
 @router.get("/list/", response_model=list[PromocodeListResponse])
-async def get_promocodes(session: db_dep):
+async def get_promocodes(session: db_dep, current_user: current_user_dep):
     stmt = select(Promocodes)
+
+    if not (current_user.is_staff or current_user.is_superuser):
+        stmt = stmt.where(Promocodes.is_active.is_(True))
+
     code = session.execute(stmt).scalars().all()
 
     return code
@@ -67,7 +71,7 @@ async def apply_promocode(
     if code.max_uses is not None and code.used_count >= code.max_uses:
         raise HTTPException(status_code=400, detail="Code exhausted")
 
-    discount_amount = apply_data.price * code.discount_percentage / 100
+    discount_amount = round(apply_data.price * code.discount_percentage / 100)
     final_price = apply_data.price - discount_amount
 
     code.used_count += 1

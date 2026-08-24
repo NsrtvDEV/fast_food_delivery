@@ -6,7 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 
 from app.database import db_dep
-from app.models import User
+from app.models import TokenBlackList, User
 from app.utils import decode_jwt_token
 
 jwt_security = HTTPBearer(auto_error=False)
@@ -20,7 +20,23 @@ def get_current_user(
     if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
+    blacklisted = (
+        session.execute(
+            select(TokenBlackList).where(
+                TokenBlackList.token == credentials.credentials
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if blacklisted:
+        raise HTTPException(status_code=401, detail="Token has been revoked")
+
     decode = decode_jwt_token(credentials.credentials)
+
+    if decode.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Invalid token type")
+
     user_id = decode["sub"]
     exp = datetime.fromtimestamp(decode["exp"], tz=timezone.utc)
 

@@ -1,5 +1,4 @@
 from datetime import datetime
-from zoneinfo import ZoneInfo
 from enum import Enum
 from sqlalchemy import (
     BigInteger,
@@ -10,7 +9,7 @@ from sqlalchemy import (
     Text,
     DateTime,
     ForeignKey,
-    func
+    func,
 )
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -29,29 +28,30 @@ class BaseModel(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=func.now(ZoneInfo("Asia/Tashkent"))
+        DateTime(timezone=True), default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=func.now(ZoneInfo("Asia/Tashkent")), onupdate=func.now(ZoneInfo("Asia/Tashkent"))
-    )   
+        DateTime(timezone=True),
+        default=func.now(),
+        onupdate=func.now(),
+    )
 
 
 class User(BaseModel):
-    __tablename__ = "users"
+    __tablename__ = "users" 
 
     email: Mapped[str] = mapped_column(String(100), nullable=True)
     username: Mapped[str] = mapped_column(String(100), unique=True, nullable=True)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     first_name: Mapped[str] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str] = mapped_column(String(100), nullable=True)
-    phone: Mapped[str] = mapped_column(String(20), nullable=True)
+    phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=True)
     deleted_email: Mapped[str] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_courier: Mapped[bool] = mapped_column(Boolean, default=False)
     is_staff: Mapped[bool] = mapped_column(Boolean, default=False)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
-
 
     orders: Mapped[list["Order"]] = relationship(
         "Order", back_populates="user", lazy="raise_on_sql"
@@ -92,7 +92,7 @@ class Order(BaseModel):
     )
     branch_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("branches.id"))
     status: Mapped[str] = mapped_column(String, default="created")
-    total_price: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    total_price: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 
     user: Mapped["User"] = relationship(
         "User", back_populates="orders", lazy="raise_on_sql"
@@ -129,7 +129,7 @@ class OrderItem(BaseModel):
     order_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("orders.id"))
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"))
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    price: Mapped[float] = mapped_column(Float, nullable=False)
+    price: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
     order: Mapped["Order"] = relationship(
         "Order", back_populates="order_items", lazy="raise_on_sql"
@@ -199,7 +199,7 @@ class Cart(BaseModel):
     __tablename__ = "carts"
 
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
-    total_price: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    total_price: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 
     user: Mapped["User"] = relationship(
         "User", back_populates="cart", lazy="raise_on_sql"
@@ -218,7 +218,7 @@ class CartItem(BaseModel):
     cart_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("carts.id"))
     product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"))
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
-    price: Mapped[float] = mapped_column(Float, nullable=False)
+    price: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
     cart: Mapped["Cart"] = relationship(
         "Cart", back_populates="cart_items", lazy="raise_on_sql"
@@ -255,7 +255,7 @@ class Payment(BaseModel):
     __tablename__ = "payments"
 
     order_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("orders.id"))
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
+    amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
     payment_type: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     paid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -350,14 +350,16 @@ class Delivery(BaseModel):
     __tablename__ = "deliveries"
 
     order_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("orders.id"))
-    courier_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=True)
+    courier_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id"), nullable=True
+    )
     branch_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("branches.id"))
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     delivery_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     assigned_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(),nullable=True
+        DateTime, default=func.now(), nullable=True
     )
 
     order: Mapped["Order"] = relationship(
@@ -395,7 +397,7 @@ class Discount(BaseModel):
 
     name: Mapped[str] = mapped_column(String(50), nullable=True)
     discount_type: Mapped[str] = mapped_column(String(50), nullable=True)
-    value: Mapped[float] = mapped_column(Float)
+    value: Mapped[int] = mapped_column(BigInteger)
     start_date: Mapped[datetime] = mapped_column(DateTime)
     end_date: Mapped[datetime] = mapped_column(DateTime)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -414,10 +416,21 @@ class TokenBlackList(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     token: Mapped[str] = mapped_column(String, unique=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=func.now(ZoneInfo("Asia/Tashkent"))
+        DateTime(timezone=True), default=func.now()
     )
+
     def __repr__(self):
         return self.token
+
+
+class TelegramLink(BaseModel):
+    __tablename__ = "telegram_links"
+
+    phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    chat_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
+
+    def __repr__(self):
+        return f"<TelegramLink(phone={self.phone}, chat_id={self.chat_id})>"
 
 
 class CourierApplication(BaseModel):
@@ -439,9 +452,9 @@ class CourierWallet(BaseModel):
     courier_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id"), unique=True, nullable=False
     )
-    balance: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    balance: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="UZS")
-    
+
     courier: Mapped["User"] = relationship(
         "User", back_populates="wallet", lazy="raise_on_sql"
     )
@@ -462,8 +475,7 @@ class WalletTransaction(BaseModel):
     order_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("orders.id"), nullable=True
     )
-    amount: Mapped[float] = mapped_column(Float, nullable=False)
-
+    amount: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
     wallet: Mapped["CourierWallet"] = relationship(
         "CourierWallet", back_populates="transactions", lazy="raise_on_sql"
@@ -480,10 +492,10 @@ class OrderStatusTransition(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     order_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("orders.id"))
     from_status: Mapped[str] = mapped_column(String(20), nullable=False)
-    to_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    to_status: Mapped[str] = mapped_column(String(20), nullable=False) 
     reason: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=func.now(ZoneInfo("Asia/Tashkent"))
+        DateTime(timezone=True), default=func.now()
     )
 
     order: Mapped["Order"] = relationship(
@@ -491,4 +503,4 @@ class OrderStatusTransition(Base):
     )
 
     def __repr__(self):
-        return f"<OrderStatusTransition {self.from_status} → {self.to_status}>" 
+        return f"<OrderStatusTransition {self.from_status} → {self.to_status}>"

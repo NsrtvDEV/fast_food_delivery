@@ -62,7 +62,7 @@ async def update_category(
         raise HTTPException(status_code=404, detail="Category not found")
 
     if update_data.name:
-        name = update_data.name
+        category.name = update_data.name
 
     session.commit()
     session.refresh(category)
@@ -70,7 +70,7 @@ async def update_category(
     return category
 
 
-@router.delete("{category_id}")
+@router.delete("/{category_id}")
 async def delete_category(
     session: db_dep, category_id: int, current_user: current_user_dep
 ):

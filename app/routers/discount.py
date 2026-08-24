@@ -58,17 +58,17 @@ async def update_product(
         raise HTTPException(status_code=404, detail="Category not found")
 
     if update_data.name:
-        name = update_data.name
+        category.name = update_data.name
     if update_data.discount_type:
-        discount_type = update_data.discout_type
+        category.discount_type = update_data.discount_type
     if update_data.value:
-        value = update_data.value
+        category.value = update_data.value
     if update_data.start_date:
-        start_date = update_data.start_date
+        category.start_date = update_data.start_date
     if update_data.end_date:
-        end_date = update_data.end_date
+        category.end_date = update_data.end_date
     if update_data.is_active:
-        is_active = update_data.is_active
+        category.is_active = update_data.is_active
 
     session.commit()
     session.refresh(category)
@@ -76,7 +76,7 @@ async def update_product(
     return category
 
 
-@router.delete("{discount_id}")
+@router.delete("/{discount_id}")
 async def delete_discount(
     session: db_dep, discount_id: int, current_user: current_user_dep
 ):

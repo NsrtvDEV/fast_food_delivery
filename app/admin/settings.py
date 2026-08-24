@@ -1,5 +1,6 @@
 from starlette_admin.contrib.sqla import Admin
 
+from app.admin.auth import AdminAuthProvider
 from app.database import engine
 from app.models import (
     User,
@@ -19,7 +20,7 @@ from app.models import (
     Order,
     CourierWallet,
     WalletTransaction,
-    OrderStatusTransition
+    OrderStatusTransition,
 )
 
 from app.admin.views import (
@@ -40,11 +41,16 @@ from app.admin.views import (
     DeliveryAdminView,
     CourierWalletAdminView,
     WalletTransactionAdminView,
-    OrderStatusTransitionsView
+    OrderStatusTransitionsView,
 )
 
 
-admin = Admin(engine=engine, title="Foodify admin", base_url="/admin")
+admin = Admin(
+    engine=engine,
+    title="Foodify admin",
+    base_url="/admin",
+    auth_provider=AdminAuthProvider(),
+)
 
 admin.add_view(UserAdminView(User, icon="fa fa-user"))
 admin.add_view(OrderAdminView(Order, icon="fa fa-receipt"))
@@ -63,4 +69,6 @@ admin.add_view(DiscountAdminView(Discount, icon="fa fa-percent"))
 admin.add_view(DeliveryAdminView(Delivery, icon="fa fa-shipping-fast"))
 admin.add_view(CourierWalletAdminView(CourierWallet, icon="fa fa-wallet"))
 admin.add_view(WalletTransactionAdminView(WalletTransaction, icon="fa fa-exchange-alt"))
-admin.add_view(OrderStatusTransitionsView(OrderStatusTransition, icon="fa fa-exchange-alt"))
+admin.add_view(
+    OrderStatusTransitionsView(OrderStatusTransition, icon="fa fa-exchange-alt")
+)

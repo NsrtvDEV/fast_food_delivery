@@ -31,6 +31,7 @@ def generate_jwt_token(user_id: int, is_access_only: bool = False):
         key=settings.SECRET_KEY,
         claims={
             "sub": str(user_id),
+            "type": "access",
             "exp": datetime.now(timezone.utc)
             + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         },
@@ -44,6 +45,7 @@ def generate_jwt_token(user_id: int, is_access_only: bool = False):
         key=settings.SECRET_KEY,
         claims={
             "sub": str(user_id),
+            "type": "refresh",
             "exp": datetime.now(timezone.utc)
             + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
         },

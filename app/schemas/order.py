@@ -19,7 +19,7 @@ class OrderUpdateRequest(BaseModel):
     address_id: int
     promocode_id: int
     branch_id: int
-    total_price: float
+    total_price: int
 
 
 class OrderListResponse(BaseModel):
@@ -28,7 +28,7 @@ class OrderListResponse(BaseModel):
     address_id: int
     promocode_id: int | None = None
     branch_id: int
-    total_price: float
+    total_price: int
     created_at: datetime
 
     model_config = {
@@ -48,14 +48,11 @@ class OrderListResponse(BaseModel):
     }
 
 
-from pydantic import BaseModel
-
-
 class OrderItemResponse(BaseModel):
     id: int
     product_id: int
     quantity: int
-    price: float
+    price: int
 
 
 class OrderCreateResponse(BaseModel):
@@ -64,7 +61,7 @@ class OrderCreateResponse(BaseModel):
     address_id: int
     branch_id: int
     promocode_id: int | None
-    total_price: float
+    total_price: int
     order_items: list[OrderItemResponse]
 
 

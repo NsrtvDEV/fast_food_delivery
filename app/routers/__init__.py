@@ -13,6 +13,7 @@ from .delivery import router as delivery_router
 from .discount import router as discount_router
 from .courier import router as courier_router
 from .courier_admin import router as courier_admin_router
+from .telegram import router as telegram_router
 
 __all__ = [
     "auth_router",
@@ -30,4 +31,5 @@ __all__ = [
     "payment_router",
     "delivery_router",
     "discount_router",
+    "telegram_router",
 ]

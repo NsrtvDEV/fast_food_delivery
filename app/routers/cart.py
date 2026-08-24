@@ -15,14 +15,12 @@ from app.models import Cart, CartItem, Product
 router = APIRouter(prefix="/cart", tags=["Cart"])
 
 
-@router.get("cart/{cart_id}", response_model=CartResponse)
-async def get_cart(session: db_dep, cart_id: int):
+@router.get("/{cart_id}", response_model=CartResponse)
+async def get_cart(session: db_dep, cart_id: int, current_user: current_user_dep):
     stmt = (
         select(Cart)
-        .options(
-            selectinload(Cart.cart_items).selectinload(CartItem.product)
-        )
-        .where(Cart.id == cart_id)
+        .options(selectinload(Cart.cart_items).selectinload(CartItem.product))
+        .where(Cart.id == cart_id, Cart.user_id == current_user.id)
     )
     result = session.execute(stmt)
     cart = result.scalars().first()
@@ -104,7 +102,7 @@ async def add_products_to_cart(
         message="Products added to cart successfully",
         cart_item_id=last_cart_item_id,
         cart=cart,
-    ) 
+    )
 
 
 @router.patch("/items/{item_id}", response_model=CartResponse)
@@ -135,9 +133,7 @@ async def update_cart_item(
         cart_item.quantity = update_data.quantity
         session.flush()
 
-    cart.total_price = round(
-        sum(item.price * item.quantity for item in cart.cart_items), 2
-    )
+    cart.total_price = sum(item.price * item.quantity for item in cart.cart_items)
     session.commit()
     return cart
 
@@ -163,9 +159,7 @@ async def remove_cart_item(
 
     session.delete(cart_item)
     session.flush()
-    cart.total_price = round(
-        sum(item.price * item.quantity for item in cart.cart_items), 2
-    )
+    cart.total_price = sum(item.price * item.quantity for item in cart.cart_items)
     session.commit()
     return cart
 

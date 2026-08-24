@@ -1,11 +1,13 @@
 import secrets
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
+from app.config import settings
 from app.database import db_dep
 from app.models import User, Cart
+from app.rate_limit import rate_limiter
 from app.schemas.auth import UserRegisterRequest, UserRegisterResponse
 from app.utils import hash_password, send_email, redis_client
 
@@ -13,18 +15,39 @@ from app.utils import hash_password, send_email, redis_client
 router = APIRouter(prefix="/register", tags=["Auth"])
 
 
-@router.post("/", response_model=UserRegisterResponse)
+@router.post(
+    "/",
+    response_model=UserRegisterResponse,
+    dependencies=[Depends(rate_limiter("register", 5, 3600))],
+)
 async def register_user(session: db_dep, data: UserRegisterRequest):
 
     stmt = select(User).where(User.email == data.email)
-    res = session.execute(stmt).scalars().first()
+    existing = session.execute(stmt).scalars().first()
 
-    if res:
-        raise HTTPException(status_code=400, detail="User already exists")
+    if existing:
+        # Respond exactly like a fresh registration so the API can't be used
+        # to probe which emails are already registered. The account owner is
+        # still informed — just through the inbox, not the HTTP response.
+        send_email(
+            data.email,
+            "Registration attempt",
+            "Someone tried to register a new account with this email, but you "
+            "already have one. If this was you, just log in instead.",
+        )
+        return JSONResponse(
+            status_code=204,
+            content={"message": "Email confirmation sent to your email."},
+        )
 
     stmt = select(User).limit(1)
     existing_user = session.execute(stmt).scalars().first()
     is_first_user = existing_user is None
+    grant_superuser = (
+        is_first_user
+        and settings.SETUP_TOKEN is not None
+        and data.setup_token == settings.SETUP_TOKEN
+    )
 
     user = User(
         email=data.email, password_hash=hash_password(data.password), is_active=False
@@ -43,7 +66,7 @@ async def register_user(session: db_dep, data: UserRegisterRequest):
 
     redis_client.setex(secret_code, 120, user.email)
 
-    if is_first_user:
+    if grant_superuser:
         user.is_active = True
         user.is_staff = True
         user.is_superuser = True
@@ -55,7 +78,11 @@ async def register_user(session: db_dep, data: UserRegisterRequest):
     )
 
 
-@router.post("/verify/{secret_code}", response_model=UserRegisterResponse)
+@router.post(
+    "/verify/{secret_code}",
+    response_model=UserRegisterResponse,
+    dependencies=[Depends(rate_limiter("verify", 10, 300))],
+)
 async def verify_register(session: db_dep, secret_code: str):
     email = redis_client.get(secret_code)
 

@@ -17,7 +17,7 @@ async def me(current_user: current_user_dep):
     return current_user
 
 
-@router.put("/me/update/")
+@router.put("/me/update/", response_model=UserProfileResponse)
 async def update_user(
     session: db_dep, current_user: current_user_dep, update_data: UserUpdateRequest
 ):
@@ -59,9 +59,9 @@ async def logout(
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     stmt = select(TokenBlackList).where(TokenBlackList.token == token)
-    token = session.execute(stmt).scalars().first()
+    existing = session.execute(stmt).scalars().first()
 
-    if token:
+    if existing:
         raise HTTPException(status_code=400, detail="Token already invalidated")
 
     blanc_list_token = TokenBlackList(token=token)

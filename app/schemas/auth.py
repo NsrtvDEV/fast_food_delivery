@@ -7,6 +7,7 @@ class UserRegisterRequest(BaseModel):
     email: EmailStr
     password: str
     password2: str
+    setup_token: str | None = None
 
     @model_validator(mode="after")
     def check_passwords_match(self) -> "UserRegisterRequest":
@@ -25,20 +26,6 @@ class UserRegisterResponse(BaseModel):
     created_at: datetime
 
 
-class UserProfileResponse(BaseModel):
-    id: int
-    first_name: str
-    last_name: str
-    phone: str | None = None
-    email: EmailStr
-    username: str | None = None
-    password_hash: str
-    is_active: bool
-    is_staff: bool
-    is_superuser: bool
-    is_deleted: bool | None = None
-
-
 class UserLoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -46,3 +33,12 @@ class UserLoginRequest(BaseModel):
 
 class RefreshToken(BaseModel):
     refresh_token: str
+
+
+class PhoneRequestCodeRequest(BaseModel):
+    phone: str
+
+
+class PhoneVerifyRequest(BaseModel):
+    phone: str
+    code: str

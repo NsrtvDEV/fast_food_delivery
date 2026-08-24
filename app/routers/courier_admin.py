@@ -87,11 +87,7 @@ async def make_decision(
         user = session.execute(stmt).scalars().first()
         user.is_courier = True
 
-        wallet=CourierWallet(
-            courier_id=user.id,
-            balance=0.0,
-            currency="UZS"
-        )
+        wallet = CourierWallet(courier_id=user.id, balance=0, currency="UZS")
         session.add(wallet)
 
     session.commit()
