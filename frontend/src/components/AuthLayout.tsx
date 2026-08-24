@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Hamburger, Search } from 'lucide-react'
-import { BurgerIllustration } from './BurgerIllustration'
+import heroBurger from '../assets/hero-burger.jpg'
 import { ParsleyAccent, ChiliAccent } from './FoodAccents'
 
 export function AuthLayout({
@@ -18,18 +18,15 @@ export function AuthLayout({
   return (
     <div className="flex min-h-screen w-full bg-cream-100 p-3 lg:p-4">
       <div className="relative hidden w-[46%] shrink-0 overflow-hidden rounded-[2.5rem] lg:block">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-300 via-brand-400 to-brand-600" />
-        <div className="absolute -left-16 top-10 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
-        <div className="absolute -right-10 bottom-24 h-72 w-72 rounded-full bg-ink-900/10 blur-3xl" />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
+        <motion.img
+          initial={{ opacity: 0, scale: 1.08 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="flex h-full items-center justify-center"
-        >
-          <BurgerIllustration className="w-[80%] max-w-md drop-shadow-2xl" />
-        </motion.div>
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          src={heroBurger}
+          alt="Сочный чизбургер"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-900/80 via-ink-900/10 to-ink-900/30" />
 
         <motion.div
           initial={{ opacity: 0, y: -10 }}
