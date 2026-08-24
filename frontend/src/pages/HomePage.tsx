@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LogOut, UtensilsCrossed } from 'lucide-react'
+import { LogOut, Hamburger } from 'lucide-react'
 import { toast } from 'sonner'
 import { authApi } from '../api/client'
 import { useAuthStore } from '../store/auth'
@@ -33,11 +33,11 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-ink-50">
+    <div className="flex min-h-screen flex-col bg-cream-100">
       <header className="flex items-center justify-between border-b border-ink-100 bg-white px-6 py-4 lg:px-10">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white">
-            <UtensilsCrossed className="h-4.5 w-4.5" />
+            <Hamburger className="h-4.5 w-4.5" strokeWidth={2.5} />
           </div>
           <span className="text-lg font-extrabold tracking-tight text-ink-900">Foodify</span>
         </div>

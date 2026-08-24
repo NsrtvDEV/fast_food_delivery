@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { KeyRound, ArrowRight, MailCheck } from 'lucide-react'
+import { ArrowRight, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { AuthLayout } from '../components/AuthLayout'
 import { Input } from '../components/Input'
@@ -30,7 +30,11 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <AuthLayout title="Подтвердите email" subtitle="Введите код, который мы отправили вам на почту">
+    <AuthLayout
+      heading="Подтвердите"
+      highlight="Email"
+      subtitle="Введите код, который мы отправили вам на почту"
+    >
       {email && (
         <div className="mb-6 flex items-center gap-2.5 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-700">
           <MailCheck className="h-4 w-4 shrink-0" />
@@ -44,7 +48,6 @@ export default function VerifyEmailPage() {
         <Input
           label="Код подтверждения"
           type="text"
-          icon={<KeyRound className="h-4 w-4" />}
           placeholder="Введите код из письма"
           value={code}
           onChange={(e) => setCode(e.target.value)}
@@ -58,7 +61,7 @@ export default function VerifyEmailPage() {
 
       <p className="mt-8 text-center text-sm text-ink-500">
         Ошиблись при регистрации?{' '}
-        <Link to="/register" className="font-semibold text-brand-600 hover:text-brand-700">
+        <Link to="/register" className="font-semibold text-brand-500 hover:text-brand-600">
           Начать заново
         </Link>
       </p>

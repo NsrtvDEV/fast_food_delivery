@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, Phone, KeyRound, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { AuthLayout } from '../components/AuthLayout'
 import { Input } from '../components/Input'
@@ -17,6 +17,7 @@ export default function LoginPage() {
 
   const [method, setMethod] = useState<Method>('email')
   const [loading, setLoading] = useState(false)
+  const [rememberMe, setRememberMe] = useState(true)
 
   // email method
   const [email, setEmail] = useState('')
@@ -72,8 +73,12 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthLayout title="С возвращением" subtitle="Войдите, чтобы продолжить заказ">
-      <div className="mb-6 flex rounded-2xl bg-ink-100 p-1">
+    <AuthLayout
+      heading="С возвращением,"
+      highlight="Вход"
+      subtitle="Введите свои данные, чтобы войти в аккаунт"
+    >
+      <div className="mb-6 flex rounded-2xl bg-ink-100/70 p-1">
         <button
           type="button"
           onClick={() => setMethod('email')}
@@ -108,7 +113,6 @@ export default function LoginPage() {
             <Input
               label="Email"
               type="email"
-              icon={<Mail className="h-4 w-4" />}
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -117,12 +121,31 @@ export default function LoginPage() {
             <Input
               label="Пароль"
               type="password"
-              icon={<Lock className="h-4 w-4" />}
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-600">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-ink-300 text-brand-500 accent-brand-500 focus:ring-brand-300"
+                />
+                Запомнить меня
+              </label>
+              <button
+                type="button"
+                onClick={() => toast('Восстановление пароля скоро появится')}
+                className="text-sm font-semibold text-brand-500 hover:text-brand-600"
+              >
+                Забыли пароль?
+              </button>
+            </div>
+
             <Button type="submit" loading={loading} className="mt-2 w-full">
               Войти
               <ArrowRight className="h-4 w-4" />
@@ -141,7 +164,6 @@ export default function LoginPage() {
             <Input
               label="Номер телефона"
               type="tel"
-              icon={<Phone className="h-4 w-4" />}
               placeholder="+998 90 123 45 67"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -170,7 +192,6 @@ export default function LoginPage() {
               label="Код из Telegram"
               type="text"
               inputMode="numeric"
-              icon={<KeyRound className="h-4 w-4" />}
               placeholder="123456"
               value={code}
               onChange={(e) => setCode(e.target.value)}
@@ -193,7 +214,7 @@ export default function LoginPage() {
 
       <p className="mt-8 text-center text-sm text-ink-500">
         Нет аккаунта?{' '}
-        <Link to="/register" className="font-semibold text-brand-600 hover:text-brand-700">
+        <Link to="/register" className="font-semibold text-brand-500 hover:text-brand-600">
           Зарегистрироваться
         </Link>
       </p>

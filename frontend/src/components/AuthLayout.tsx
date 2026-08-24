@@ -1,105 +1,109 @@
 import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { UtensilsCrossed } from 'lucide-react'
-
-const floatingItems = [
-  { emoji: '🍔', top: '12%', left: '15%', delay: 0 },
-  { emoji: '🍕', top: '68%', left: '10%', delay: 0.6 },
-  { emoji: '🥤', top: '20%', left: '78%', delay: 1.1 },
-  { emoji: '🍟', top: '75%', left: '72%', delay: 0.3 },
-  { emoji: '🌮', top: '45%', left: '85%', delay: 1.6 },
-  { emoji: '🍩', top: '50%', left: '5%', delay: 2.1 },
-]
+import { Hamburger, Search } from 'lucide-react'
+import { BurgerIllustration } from './BurgerIllustration'
+import { ParsleyAccent, ChiliAccent } from './FoodAccents'
 
 export function AuthLayout({
-  title,
+  heading,
+  highlight,
   subtitle,
   children,
 }: {
-  title: string
+  heading: string
+  highlight: string
   subtitle: string
   children: ReactNode
 }) {
   return (
-    <div className="flex min-h-screen w-full bg-ink-950">
-      <div className="relative hidden w-1/2 overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-14">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-500 via-brand-600 to-ink-900" />
-        <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-brand-300/30 blur-3xl" />
-        <div className="absolute -bottom-32 -right-16 h-[28rem] w-[28rem] rounded-full bg-brand-800/40 blur-3xl" />
+    <div className="flex min-h-screen w-full bg-cream-100 p-3 lg:p-4">
+      <div className="relative hidden w-[46%] shrink-0 overflow-hidden rounded-[2.5rem] lg:block">
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-300 via-brand-400 to-brand-600" />
+        <div className="absolute -left-16 top-10 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -right-10 bottom-24 h-72 w-72 rounded-full bg-ink-900/10 blur-3xl" />
 
-        {floatingItems.map((item, i) => (
-          <motion.span
-            key={i}
-            className="absolute text-4xl drop-shadow-lg select-none"
-            style={{ top: item.top, left: item.left }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 0.9, y: [0, -14, 0] }}
-            transition={{
-              opacity: { delay: item.delay, duration: 0.6 },
-              y: { delay: item.delay, duration: 4, repeat: Infinity, ease: 'easeInOut' },
-            }}
-          >
-            {item.emoji}
-          </motion.span>
-        ))}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="flex h-full items-center justify-center"
+        >
+          <BurgerIllustration className="w-[80%] max-w-md drop-shadow-2xl" />
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 flex items-center gap-2.5 text-white"
+          className="absolute left-8 top-8 flex items-center gap-2 rounded-2xl bg-white/90 px-3.5 py-2 shadow-lg backdrop-blur"
         >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-            <UtensilsCrossed className="h-5 w-5" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-white">
+            <Hamburger className="h-4 w-4" strokeWidth={2.5} />
           </div>
-          <span className="text-xl font-extrabold tracking-tight">Foodify</span>
+          <span className="text-base font-extrabold tracking-tight text-ink-900">Foodify</span>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="relative z-10 max-w-md"
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="absolute bottom-8 left-8 right-8"
         >
-          <h2 className="text-4xl font-extrabold leading-tight text-white">
-            Голод — это временно.
+          <p className="text-2xl font-extrabold leading-snug text-white drop-shadow-sm">
+            Сочно. Быстро.
             <br />
-            Foodify — навсегда.
-          </h2>
-          <p className="mt-4 text-base text-white/80">
-            Любимая еда из ближайших филиалов, доставка в реальном времени и лучшие акции — всё в
-            одном приложении.
+            Прямо к твоей двери.
           </p>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="relative z-10 text-sm text-white/60"
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+          className="absolute bottom-8 right-8 flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-lg"
         >
-          © {new Date().getFullYear()} Foodify. Быстро. Вкусно. Рядом.
+          <Search className="h-4.5 w-4.5 text-brand-600" strokeWidth={2.5} />
         </motion.div>
       </div>
 
-      <div className="flex w-full flex-1 items-center justify-center bg-ink-50 px-6 py-12 lg:w-1/2">
+      <div className="relative flex flex-1 items-center justify-center px-6 py-10 sm:px-12">
+        <ParsleyAccent className="pointer-events-none absolute left-6 top-6 h-14 w-14 opacity-70 lg:left-10 lg:top-10" />
+        <ChiliAccent className="pointer-events-none absolute bottom-8 right-6 h-16 w-16 rotate-12 opacity-70 lg:bottom-12 lg:right-10" />
+
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="w-full max-w-sm"
         >
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
+          <div className="mb-10 flex items-center gap-2.5 lg:hidden">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-white">
-              <UtensilsCrossed className="h-4.5 w-4.5" />
+              <Hamburger className="h-4.5 w-4.5" strokeWidth={2.5} />
             </div>
             <span className="text-lg font-extrabold tracking-tight text-ink-900">Foodify</span>
           </div>
 
-          <h1 className="text-2xl font-extrabold text-ink-900">{title}</h1>
-          <p className="mt-1.5 text-sm text-ink-500">{subtitle}</p>
+          <h1 className="text-3xl font-extrabold leading-tight text-ink-900 sm:text-4xl">
+            {heading} <span className="text-brand-500">{highlight}</span>
+          </h1>
+          <p className="mt-2.5 text-sm text-ink-500">{subtitle}</p>
 
           <div className="mt-8">{children}</div>
+
+          <div className="mt-10 flex flex-col items-center gap-1.5 text-center">
+            <p className="text-xs font-medium text-ink-400">
+              <a href="#" className="hover:text-ink-600">
+                Privacy Policy
+              </a>{' '}
+              <span className="text-ink-300">|</span>{' '}
+              <a href="#" className="hover:text-ink-600">
+                Terms of Use
+              </a>
+            </p>
+            <p className="text-xs text-ink-300">
+              © {new Date().getFullYear()} Foodify. Все права защищены.
+            </p>
+          </div>
         </motion.div>
       </div>
     </div>
