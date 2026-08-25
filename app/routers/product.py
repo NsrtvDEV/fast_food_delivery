@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, UploadFile, Depends
 from fastapi.responses import FileResponse
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from pathlib import Path
 import shutil
 from typing import Annotated
@@ -17,25 +18,38 @@ from app.schemas.product import (
 )
 from app.dependencies import current_user_dep
 from app.config import settings
+from app.utils import calculate_discounted_price
 
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
+def _to_list_response(product: Product) -> ProductListResponse:
+    return ProductListResponse(
+        id=product.id,
+        category_id=product.category_id,
+        image_id=product.image_id,
+        name=product.name,
+        description=product.description,
+        price=product.price,
+        final_price=calculate_discounted_price(product.price, product.discount),
+        is_active=product.is_active,
+    )
+
+
 @router.get("/list/", response_model=list[ProductListResponse])
 async def get_products(session: db_dep, search: str | None = None):
-    stmt = (
-        select(Product).where(Product.name.ilike(f"%{search}%"))
-        if search
-        else select(Product)
-    )
-    res = session.execute(stmt)
-    product = res.scalars().all()
+    stmt = select(Product).options(selectinload(Product.discount))
+    if search:
+        stmt = stmt.where(Product.name.ilike(f"%{search}%"))
 
-    if not product:
+    res = session.execute(stmt)
+    products = res.scalars().all()
+
+    if not products:
         raise HTTPException(status_code=404, detail="Products not found")
 
-    return product
+    return [_to_list_response(p) for p in products]
 
 
 @router.get("/image/{image_id}")
@@ -50,14 +64,18 @@ async def get_product_image(session: db_dep, image_id: int):
 
 @router.get("/{product_id}", response_model=ProductListResponse)
 async def get_product(session: db_dep, product_id: int):
-    stmt = select(Product).where(Product.id == product_id)
+    stmt = (
+        select(Product)
+        .options(selectinload(Product.discount))
+        .where(Product.id == product_id)
+    )
     res = session.execute(stmt)
     product = res.scalars().first()
 
     if not product:
         raise HTTPException(status_code=404, detail="product not found")
 
-    return product
+    return _to_list_response(product)
 
 
 @router.post("/create", response_model=ProductCreateResponse)

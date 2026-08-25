@@ -9,6 +9,7 @@ class ProductListResponse(BaseModel):
     name: str
     description: str
     price: int
+    final_price: int
     is_active: bool
 
     model_config = {

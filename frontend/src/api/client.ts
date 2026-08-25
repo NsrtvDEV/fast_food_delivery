@@ -123,3 +123,57 @@ export const authApi = {
     }
   },
 }
+
+export interface Category {
+  id: number
+  name: string
+}
+
+export interface Product {
+  id: number
+  category_id: number
+  image_id: number | null
+  name: string
+  description: string
+  price: number
+  final_price: number
+  is_active: boolean
+}
+
+export const catalogApi = {
+  async categories(): Promise<Category[]> {
+    try {
+      const res = await api.get('/category/list/')
+      return res.data
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Не удалось загрузить категории'))
+    }
+  },
+
+  async products(search?: string): Promise<Product[]> {
+    try {
+      const res = await api.get('/products/list/', { params: search ? { search } : {} })
+      return res.data
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return []
+      }
+      throw new Error(extractErrorMessage(error, 'Не удалось загрузить товары'))
+    }
+  },
+
+  productImageUrl(imageId: number): string {
+    return `${API_BASE_URL}/products/image/${imageId}`
+  },
+}
+
+export const cartApi = {
+  async addItem(productId: number, quantity = 1) {
+    try {
+      const res = await api.post('/cart/items', { items: [{ product_id: productId, quantity }] })
+      return res.data
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Не удалось добавить в корзину'))
+    }
+  },
+}
