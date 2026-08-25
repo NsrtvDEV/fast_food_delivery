@@ -6,11 +6,11 @@ import { toast } from 'sonner'
 import { Navbar } from '../components/Navbar'
 import { ProductCard } from '../components/ProductCard'
 import { CategoryPill } from '../components/CategoryPill'
+import { FastFoodIllustration } from '../components/FastFoodIllustration'
 import { catalogApi, authApi, cartApi, type Category, type Product } from '../api/client'
 import { useAuthStore } from '../store/auth'
 import { useCartStore } from '../store/cart'
 import { getCategoryIcon } from '../lib/categoryIcons'
-import heroBurger from '../assets/hero-burger.jpg'
 
 const FEATURES = [
   { icon: Truck, title: 'Быстрая доставка', text: 'В среднем 30 минут' },
@@ -105,11 +105,9 @@ export default function HomePage() {
             className="relative mx-auto w-full max-w-sm"
           >
             <div className="absolute inset-0 m-auto h-56 w-56 rounded-full bg-brand-300/40 blur-2xl" />
-            <img
-              src={heroBurger}
-              alt="Сочный чизбургер"
-              className="relative aspect-square w-full rounded-full object-cover shadow-2xl"
-            />
+            <div className="relative flex aspect-square w-full items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-300 shadow-2xl">
+              <FastFoodIllustration className="w-[78%]" />
+            </div>
           </motion.div>
         </div>
       </section>
