@@ -2,9 +2,14 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 
 from app.dependencies import current_user_dep, credentials_dep
-from app.schemas.user import UserProfileResponse, UserUpdateRequest
+from app.schemas.user import (
+    UserProfileResponse,
+    UserUpdateRequest,
+    ChangePasswordRequest,
+)
 from app.database import db_dep
-from app.models import TokenBlackList
+from app.models import TokenBlackList, TelegramLink
+from app.utils import hash_password, verify_password
 
 router = APIRouter(
     prefix="/users",
@@ -12,9 +17,30 @@ router = APIRouter(
 )
 
 
+def _profile_response(session: db_dep, user) -> UserProfileResponse:
+    telegram_linked = False
+    if user.phone:
+        stmt = select(TelegramLink).where(TelegramLink.phone == user.phone)
+        telegram_linked = session.execute(stmt).scalars().first() is not None
+
+    return UserProfileResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        phone=user.phone,
+        is_active=user.is_active,
+        is_staff=user.is_staff,
+        is_courier=user.is_courier,
+        is_superuser=user.is_superuser,
+        is_deleted=user.is_deleted,
+        telegram_linked=telegram_linked,
+    )
+
+
 @router.get("/me", response_model=UserProfileResponse)
-async def me(current_user: current_user_dep):
-    return current_user
+async def me(session: db_dep, current_user: current_user_dep):
+    return _profile_response(session, current_user)
 
 
 @router.put("/me/update/", response_model=UserProfileResponse)
@@ -37,7 +63,20 @@ async def update_user(
     session.commit()
     session.refresh(current_user)
 
-    return current_user
+    return _profile_response(session, current_user)
+
+
+@router.post("/me/change-password/")
+async def change_password(
+    session: db_dep, current_user: current_user_dep, data: ChangePasswordRequest
+):
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    current_user.password_hash = hash_password(data.new_password)
+    session.commit()
+
+    return {"detail": "Password changed successfully"}
 
 
 @router.post("/me/deactivate/", status_code=200)
