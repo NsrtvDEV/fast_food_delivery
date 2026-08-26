@@ -1,13 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Truck, ShieldCheck, Gift, UtensilsCrossed } from 'lucide-react'
+import { Truck, ShieldCheck, Gift, UtensilsCrossed, Phone, Mail, MapPin, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { Navbar } from '../components/Navbar'
 import { ProductCard } from '../components/ProductCard'
 import { CategoryPill } from '../components/CategoryPill'
-import { FastFoodIllustration } from '../components/FastFoodIllustration'
-import { catalogApi, authApi, cartApi, type Category, type Product } from '../api/client'
+import { FoodCollage } from '../components/FoodCollage'
+import { PromoCard } from '../components/PromoCard'
+import { DealCard } from '../components/DealCard'
+import { AddressBar } from '../components/AddressBar'
+import {
+  catalogApi,
+  authApi,
+  cartApi,
+  settingsApi,
+  cartItemCount,
+  type Category,
+  type Product,
+  type SiteSettings,
+} from '../api/client'
 import { useAuthStore } from '../store/auth'
 import { useCartStore } from '../store/cart'
 import { getCategoryIcon } from '../lib/categoryIcons'
@@ -20,8 +32,9 @@ const FEATURES = [
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, setUser, logout } = useAuthStore()
-  const addOne = useCartStore((s) => s.addOne)
+  const setCartCount = useCartStore((s) => s.setCount)
 
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -29,6 +42,7 @@ export default function HomePage() {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState<number | null>(null)
   const [addingId, setAddingId] = useState<number | null>(null)
+  const [settings, setSettings] = useState<SiteSettings | null>(null)
 
   useEffect(() => {
     if (user) return
@@ -52,7 +66,38 @@ export default function HomePage() {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    settingsApi.get().then(setSettings).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (loading || !location.hash) return
+    const id = location.hash.slice(1)
+    const el = document.getElementById(id)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [loading, location.hash])
+
+  useEffect(() => {
+    cartApi
+      .get()
+      .then((cart) => setCartCount(cartItemCount(cart)))
+      .catch(() => {})
+  }, [setCartCount])
+
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
+
+  const categoryImageById = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const p of products) {
+      if (p.image_id && !map.has(p.category_id)) {
+        map.set(p.category_id, catalogApi.productImageUrl(p.image_id))
+      }
+    }
+    return map
+  }, [products])
+
+  const deals = useMemo(() => products.filter((p) => p.final_price < p.price), [products])
+  const dealProduct = deals[0] ?? null
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -65,8 +110,8 @@ export default function HomePage() {
   async function handleAdd(productId: number) {
     setAddingId(productId)
     try {
-      await cartApi.addItem(productId)
-      addOne()
+      const { cart } = await cartApi.addItem(productId)
+      setCartCount(cartItemCount(cart))
       toast.success('Добавлено в корзину')
     } catch (err) {
       toast.error((err as Error).message)
@@ -96,6 +141,9 @@ export default function HomePage() {
               Свежие бургеры, шаурма, пицца и многое другое — из ближайшего филиала Foodify
               прямо к твоей двери.
             </p>
+            <div className="mt-5 max-w-sm">
+              <AddressBar />
+            </div>
           </motion.div>
 
           <motion.div
@@ -105,9 +153,16 @@ export default function HomePage() {
             className="relative mx-auto w-full max-w-sm"
           >
             <div className="absolute inset-0 m-auto h-56 w-56 rounded-full bg-brand-300/40 blur-2xl" />
-            <div className="relative flex aspect-square w-full items-center justify-center rounded-full bg-gradient-to-br from-brand-100 to-brand-300 shadow-2xl">
-              <FastFoodIllustration className="w-[78%]" />
-            </div>
+            {dealProduct ? (
+              <PromoCard
+                product={dealProduct}
+                onOrder={() => handleAdd(dealProduct.id)}
+                ordering={addingId === dealProduct.id}
+                className="relative w-full"
+              />
+            ) : (
+              <FoodCollage className="relative w-full" />
+            )}
           </motion.div>
         </div>
       </section>
@@ -145,6 +200,7 @@ export default function HomePage() {
               key={c.id}
               label={c.name}
               icon={getCategoryIcon(c.name)}
+              imageUrl={categoryImageById.get(c.id)}
               active={activeCategory === c.id}
               onClick={() => setActiveCategory(c.id)}
             />
@@ -152,7 +208,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
+      {deals.length > 0 && (
+        <section id="deals" className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 lg:px-8">
+          <h2 className="mb-4 text-xl font-extrabold text-ink-900">Лучшие предложения</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {deals.map((p) => (
+              <DealCard
+                key={p.id}
+                product={p}
+                onOrder={() => handleAdd(p.id)}
+                ordering={addingId === p.id}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section id="catalog" className="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">
         <h2 className="mb-4 text-xl font-extrabold text-ink-900">
           {activeCategory ? categoryById.get(activeCategory)?.name : 'Все блюда'}
         </h2>
@@ -175,6 +247,65 @@ export default function HomePage() {
           </div>
         )}
       </section>
+
+      {settings && (settings.about_title || settings.about_text) && (
+        <section id="about" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+          <div className="rounded-[2rem] bg-white p-8 text-center ring-1 ring-ink-100 sm:p-12">
+            {settings.about_title && (
+              <h2 className="text-2xl font-extrabold text-ink-900">{settings.about_title}</h2>
+            )}
+            {settings.about_text && (
+              <p className="mx-auto mt-3 max-w-2xl text-ink-500">{settings.about_text}</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {settings &&
+        (settings.contact_phone ||
+          settings.contact_email ||
+          settings.contact_address ||
+          settings.contact_hours) && (
+          <section id="contact" className="mx-auto max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+            <h2 className="mb-4 text-xl font-extrabold text-ink-900">Контакты</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {settings.contact_phone && (
+                <ContactItem icon={Phone} label="Телефон" value={settings.contact_phone} />
+              )}
+              {settings.contact_email && (
+                <ContactItem icon={Mail} label="Email" value={settings.contact_email} />
+              )}
+              {settings.contact_address && (
+                <ContactItem icon={MapPin} label="Адрес" value={settings.contact_address} />
+              )}
+              {settings.contact_hours && (
+                <ContactItem icon={Clock} label="Режим работы" value={settings.contact_hours} />
+              )}
+            </div>
+          </section>
+        )}
+    </div>
+  )
+}
+
+function ContactItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Phone
+  label: string
+  value: string
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-ink-100">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-500">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">{label}</p>
+        <p className="truncate font-bold text-ink-900">{value}</p>
+      </div>
     </div>
   )
 }
