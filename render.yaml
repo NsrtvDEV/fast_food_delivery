@@ -1,0 +1,107 @@
+databases:
+  - name: foodify-db
+    plan: free
+    region: oregon
+
+services:
+  - name: foodify-api
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    dockerCommand: "sh -c 'alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
+    healthCheckPath: /health
+    envVars:
+      - key: PROJECT_NAME
+        value: fast_food_delivery
+      - key: DEBUG
+        value: "0"
+      - key: BASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: SETUP_TOKEN
+        sync: false
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: DB_HOST
+        fromDatabase:
+          name: foodify-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: foodify-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: foodify-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: foodify-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: foodify-db
+          property: password
+      - key: REDIS_URL
+        fromService:
+          name: foodify-redis
+          type: keyvalue
+          property: connectionString
+
+  - name: foodify-celery
+    type: worker
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    dockerCommand: celery -A app.celery worker --loglevel=info
+    envVars:
+      - key: PROJECT_NAME
+        value: fast_food_delivery
+      - key: DEBUG
+        value: "0"
+      - key: BASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: DB_HOST
+        fromDatabase:
+          name: foodify-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: foodify-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: foodify-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: foodify-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: foodify-db
+          property: password
+      - key: REDIS_URL
+        fromService:
+          name: foodify-redis
+          type: keyvalue
+          property: connectionString
+
+  - name: foodify-redis
+    type: keyvalue
+    plan: free
+    ipAllowList: []

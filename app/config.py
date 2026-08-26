@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     DEBUG: bool
     MEDIA_PATH: str = "media"
     BASE_URL: str = "https://foodify.uz"
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     SESSION_ID_EXPIRE_DAYS: int = 1
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
