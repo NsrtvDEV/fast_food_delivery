@@ -1,7 +1,15 @@
-import { useNavigate } from 'react-router-dom'
-import { Hamburger, Search, ShoppingCart, LogOut } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Hamburger, Search, ShoppingCart, ClipboardList, LogOut } from 'lucide-react'
 import { useAuthStore } from '../store/auth'
 import { useCartStore } from '../store/cart'
+
+const NAV_LINKS = [
+  { label: 'Главная', targetId: null },
+  { label: 'Меню', targetId: 'catalog' },
+  { label: 'Акции', targetId: 'deals' },
+  { label: 'О нас', targetId: 'about' },
+  { label: 'Контакты', targetId: 'contact' },
+]
 
 export function Navbar({
   search,
@@ -11,12 +19,25 @@ export function Navbar({
   onSearchChange: (value: string) => void
 }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout } = useAuthStore()
   const cartCount = useCartStore((s) => s.count)
 
   function handleLogout() {
     logout()
     navigate('/login')
+  }
+
+  function handleNavClick(targetId: string | null) {
+    if (location.pathname !== '/') {
+      navigate(targetId ? `/#${targetId}` : '/')
+      return
+    }
+    if (!targetId) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   return (
@@ -31,6 +52,19 @@ export function Navbar({
           </span>
         </div>
 
+        <nav className="hidden shrink-0 items-center gap-5 lg:flex">
+          {NAV_LINKS.map((link) => (
+            <button
+              key={link.label}
+              type="button"
+              onClick={() => handleNavClick(link.targetId)}
+              className="text-sm font-semibold text-ink-600 transition-colors hover:text-brand-600"
+            >
+              {link.label}
+            </button>
+          ))}
+        </nav>
+
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
           <input
@@ -44,6 +78,16 @@ export function Navbar({
 
         <button
           type="button"
+          onClick={() => navigate('/orders')}
+          title="Мои заказы"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink-100/70 text-ink-700 transition-colors hover:bg-ink-200"
+        >
+          <ClipboardList className="h-4.5 w-4.5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/cart')}
           className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink-100/70 text-ink-700 transition-colors hover:bg-ink-200"
         >
           <ShoppingCart className="h-4.5 w-4.5" />
@@ -56,8 +100,19 @@ export function Navbar({
 
         <button
           type="button"
+          onClick={() => navigate('/profile')}
+          title={user?.email ?? user?.phone ?? 'Профиль'}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 transition-colors hover:bg-brand-200"
+        >
+          {`${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`.trim() ||
+            user?.email?.[0]?.toUpperCase() ||
+            'U'}
+        </button>
+
+        <button
+          type="button"
           onClick={handleLogout}
-          title={user?.email ?? user?.phone ?? 'Выйти'}
+          title="Выйти"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink-100/70 text-ink-700 transition-colors hover:bg-ink-200"
         >
           <LogOut className="h-4 w-4" />

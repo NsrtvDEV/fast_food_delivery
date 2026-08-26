@@ -3,10 +3,12 @@ import { persist } from 'zustand/middleware'
 
 interface User {
   id: number
-  email: string
+  email: string | null
   first_name?: string | null
   last_name?: string | null
   phone?: string | null
+  is_staff?: boolean
+  is_superuser?: boolean
 }
 
 interface AuthState {
