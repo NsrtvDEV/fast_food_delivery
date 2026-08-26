@@ -38,3 +38,14 @@ class DeliveryCreateResponse(BaseModel):
     courier_id: int
     branch_id: int
     status: str
+
+
+class AdminDeliveryResponse(BaseModel):
+    delivery_id: int
+    order_id: int
+    order_status: str
+    customer_name: str
+    courier_name: str | None
+    branch_name: str | None
+    total_price: int
+    assigned_at: str | None

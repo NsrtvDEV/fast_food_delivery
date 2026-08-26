@@ -1,8 +1,8 @@
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel
 
 
-class Branch_create_req(BaseSettings):
-    name: str
+class Branch_create_req(BaseModel):
+    name: str | None = None
     address: str
     working_hours: str
     phone: str
@@ -10,12 +10,21 @@ class Branch_create_req(BaseSettings):
     longitude: float
 
 
-class Branch_update_req(BaseSettings):
-    id: int | None = None
+class Branch_update_req(BaseModel):
+    id: int
+    name: str | None = None
     address: str | None = None
     working_hours: str | None = None
     phone: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
-class Branch_delete_req(BaseSettings):
+class BranchResponse(BaseModel):
+    id: int
+    name: str | None = None
     address: str
+    working_hours: str
+    branch_phone: str
+    latitude: float | None = None
+    longitude: float | None = None

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.database import db_dep
-from app.models import Category
+from app.models import Category, Product
 from app.schemas.catgory import (
     CategoryCreateRequest,
     CategoryListResponse,
@@ -82,6 +82,15 @@ async def delete_category(
 
     if not category:
         raise HTTPException(status_code=404, detail="Category not found")
+
+    products_count = session.scalar(
+        select(func.count(Product.id)).where(Product.category_id == category_id)
+    )
+    if products_count:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete category: {products_count} product(s) still use it",
+        )
 
     session.delete(category)
     session.commit()

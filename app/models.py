@@ -77,6 +77,9 @@ class User(BaseModel):
     wallet: Mapped["CourierWallet"] = relationship(
         "CourierWallet", back_populates="courier", lazy="raise_on_sql", uselist=False
     )
+    reviews: Mapped[list["Review"]] = relationship(
+        "Review", back_populates="user", lazy="raise_on_sql"
+    )
 
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', phone='{self.phone}')>"
@@ -175,6 +178,9 @@ class Product(Base):
     )
     discount: Mapped["Discount"] = relationship(
         "Discount", back_populates="products", lazy="raise_on_sql"
+    )
+    reviews: Mapped[list["Review"]] = relationship(
+        "Review", back_populates="product", lazy="raise_on_sql"
     )
 
     def __repr__(self):
@@ -312,6 +318,7 @@ class Branches(Base):
     __tablename__ = "branches"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=True)
     address: Mapped[str] = mapped_column(String(200), nullable=False)
     working_hours: Mapped[str] = mapped_column(String(100), nullable=False)
     branch_phone: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -504,3 +511,37 @@ class OrderStatusTransition(Base):
 
     def __repr__(self):
         return f"<OrderStatusTransition {self.from_status} → {self.to_status}>"
+
+
+class SiteSettings(BaseModel):
+    __tablename__ = "site_settings"
+
+    about_title: Mapped[str] = mapped_column(String(100), nullable=True)
+    about_text: Mapped[str] = mapped_column(Text, nullable=True)
+    contact_phone: Mapped[str] = mapped_column(String(20), nullable=True)
+    contact_email: Mapped[str] = mapped_column(String(100), nullable=True)
+    contact_address: Mapped[str] = mapped_column(String(200), nullable=True)
+    contact_hours: Mapped[str] = mapped_column(String(100), nullable=True)
+
+    def __repr__(self):
+        return f"<SiteSettings(id={self.id})>"
+
+
+class Review(BaseModel):
+    __tablename__ = "reviews"
+
+    product_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("products.id"))
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str] = mapped_column(Text, nullable=True)
+    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    product: Mapped["Product"] = relationship(
+        "Product", back_populates="reviews", lazy="raise_on_sql"
+    )
+    user: Mapped["User"] = relationship(
+        "User", back_populates="reviews", lazy="raise_on_sql"
+    )
+
+    def __repr__(self):
+        return f"<Review(id={self.id}, product_id={self.product_id}, rating={self.rating})>"

@@ -27,7 +27,7 @@ async def get_promocodes(session: db_dep, current_user: current_user_dep):
     return code
 
 
-@router.post("/")
+@router.post("/", response_model=PromocodeListResponse)
 async def create_promocode(
     session: db_dep, create_data: CreatePromocodeRequest, current_user: current_user_dep
 ):

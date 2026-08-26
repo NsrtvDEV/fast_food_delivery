@@ -1,6 +1,7 @@
 from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.models import (
     Delivery,
@@ -14,7 +15,7 @@ from app.schemas.delivery import (
     OrderStatus,
 )
 from app.database import db_dep
-from app.schemas.delivery import UpdateStatusRequest, valid_transitions
+from app.schemas.delivery import UpdateStatusRequest, valid_transitions, AdminDeliveryResponse
 from app.dependencies import current_user_dep
 
 
@@ -101,6 +102,58 @@ async def get_active_orders(session: db_dep, current_user: current_user_dep):
     )
 
     return {"courier_id": current_user.id, "orders": orders}
+
+
+@router.get("/admin/active", response_model=list[AdminDeliveryResponse])
+async def get_active_deliveries_admin(session: db_dep, current_user: current_user_dep):
+    if not (current_user.is_staff or current_user.is_superuser):
+        raise HTTPException(status_code=403, detail="Staff access only")
+
+    deliveries = (
+        session.execute(
+            select(Delivery)
+            .join(Order, Order.id == Delivery.order_id)
+            .where(Order.status.in_(ACTIVE_STATUSES))
+            .options(
+                selectinload(Delivery.order).selectinload(Order.user),
+                selectinload(Delivery.courier),
+                selectinload(Delivery.branch),
+            )
+            .order_by(Delivery.assigned_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+    result = []
+    for d in deliveries:
+        order = d.order
+        customer = order.user if order else None
+        customer_name = (
+            f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            or customer.username
+            or customer.email
+            if customer
+            else "—"
+        )
+        result.append(
+            AdminDeliveryResponse(
+                delivery_id=d.id,
+                order_id=d.order_id,
+                order_status=order.status if order else "—",
+                customer_name=customer_name,
+                courier_name=(
+                    f"{d.courier.first_name or ''} {d.courier.last_name or ''}".strip()
+                    or d.courier.username
+                    if d.courier
+                    else None
+                ),
+                branch_name=d.branch.name or d.branch.address if d.branch else None,
+                total_price=order.total_price if order else 0,
+                assigned_at=d.assigned_at.isoformat() if d.assigned_at else None,
+            )
+        )
+    return result
 
 
 @router.put("/orders/{order_id}/status")

@@ -13,6 +13,12 @@ from app.dependencies import current_user_dep
 router = APIRouter(prefix="/discounts", tags=["Discounts"])
 
 
+@router.get("/list", response_model=list[DiscountCreateResponse])
+async def list_discounts(session: db_dep):
+    stmt = select(Discount).order_by(Discount.id.desc())
+    return session.execute(stmt).scalars().all()
+
+
 @router.post("/create", response_model=DiscountCreateResponse)
 async def create_discount(
     session: db_dep, create_data: DiscountCreateRequest, current_user: current_user_dep
