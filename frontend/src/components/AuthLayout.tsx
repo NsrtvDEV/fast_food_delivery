@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Hamburger, Search } from 'lucide-react'
-import { FastFoodIllustration } from './FastFoodIllustration'
+import { FoodCollage } from './FoodCollage'
 import { ParsleyAccent, ChiliAccent } from './FoodAccents'
 
 export function AuthLayout({
@@ -22,14 +22,9 @@ export function AuthLayout({
         <div className="absolute -left-16 top-10 h-56 w-56 rounded-full bg-white/15 blur-2xl" />
         <div className="absolute -right-10 bottom-24 h-72 w-72 rounded-full bg-ink-900/10 blur-3xl" />
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="flex h-full items-center justify-center p-10"
-        >
-          <FastFoodIllustration className="w-[85%] max-w-md drop-shadow-2xl" />
-        </motion.div>
+        <div className="flex h-full items-center justify-center p-10">
+          <FoodCollage className="w-[85%] max-w-md" />
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: -10 }}

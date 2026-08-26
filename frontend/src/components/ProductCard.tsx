@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { Plus } from 'lucide-react'
+import { Plus, Star } from 'lucide-react'
 import { getCategoryIcon } from '../lib/categoryIcons'
+import { catalogApi } from '../api/client'
 import type { Product, Category } from '../api/client'
 
 const gradients = [
@@ -35,7 +36,15 @@ export function ProductCard({
       <div
         className={`relative flex h-36 items-center justify-center bg-gradient-to-br ${gradient}`}
       >
-        <Icon className="h-14 w-14 text-white drop-shadow" strokeWidth={1.5} />
+        {product.image_id ? (
+          <img
+            src={catalogApi.productImageUrl(product.image_id)}
+            alt={product.name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <Icon className="h-14 w-14 text-white drop-shadow" strokeWidth={1.5} />
+        )}
         {hasDeal && (
           <span className="absolute left-3 top-3 rounded-full bg-ink-900 px-2.5 py-1 text-xs font-bold text-white">
             -{Math.round((1 - product.final_price / product.price) * 100)}%
@@ -44,7 +53,15 @@ export function ProductCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-1 p-4">
-        <h3 className="font-bold text-ink-900">{product.name}</h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-bold text-ink-900">{product.name}</h3>
+          {product.review_count > 0 && (
+            <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold text-ink-500">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              {product.average_rating}
+            </span>
+          )}
+        </div>
         <p className="line-clamp-2 flex-1 text-xs text-ink-500">{product.description}</p>
 
         <div className="mt-3 flex items-center justify-between">
