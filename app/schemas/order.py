@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 
-from app.models import OrderStatus
+from app.schemas.delivery import OrderStatus
 
 
 class OrderItemCreateRequest(BaseModel):
@@ -11,6 +11,7 @@ class OrderItemCreateRequest(BaseModel):
 
 class OrederCreateRequest(BaseModel):
     branch_id: int
+    address_id: int | None = None
     promocode: str | None = None
 
 
@@ -29,6 +30,7 @@ class OrderListResponse(BaseModel):
     promocode_id: int | None = None
     branch_id: int
     total_price: int
+    status: str
     created_at: datetime
 
     model_config = {
@@ -67,3 +69,40 @@ class OrderCreateResponse(BaseModel):
 
 class OrderTransitionRequest(BaseModel):
     to_status: OrderStatus
+
+
+class AdminOrderResponse(BaseModel):
+    id: int
+    customer_name: str
+    customer_contact: str
+    items_summary: str
+    branch_address: str | None = None
+    status: str
+    total_price: int
+    created_at: datetime
+
+
+class CustomerOrderItem(BaseModel):
+    id: int
+    product_id: int
+    product_name: str
+    image_id: int | None = None
+    quantity: int
+    price: int
+
+
+class OrderStatusHistoryEntry(BaseModel):
+    to_status: str
+    created_at: datetime
+
+
+class CustomerOrderResponse(BaseModel):
+    id: int
+    status: str
+    total_price: int
+    created_at: datetime
+    branch_name: str | None = None
+    branch_address: str | None = None
+    address_name: str | None = None
+    items: list[CustomerOrderItem]
+    status_history: list[OrderStatusHistoryEntry] = []

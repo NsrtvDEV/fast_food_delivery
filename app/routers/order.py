@@ -7,7 +7,6 @@ from app.models import (
     Order,
     Product,
     OrderItem,
-    OrderStatus,
     Promocodes,
     Cart,
     CartItem,
@@ -21,28 +20,125 @@ from app.schemas.order import (
     OrederCreateRequest,
     OrderCreateResponse,
     OrderTransitionRequest,
+    AdminOrderResponse,
+    CustomerOrderResponse,
+    CustomerOrderItem,
+    OrderStatusHistoryEntry,
 )
 from app.dependencies import current_user_dep
 from app.utils import calculate_discounted_price
-from app.schemas.delivery import valid_transitions
+from app.schemas.delivery import OrderStatus, valid_transitions
 
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
 
-@router.get("/list", response_model=list[OrderListResponse])
+@router.get("/list", response_model=list[CustomerOrderResponse])
 async def list_order(session: db_dep, current_user: current_user_dep):
     stmt = (
         select(Order)
         .where(Order.user_id == current_user.id)
-        .order_by(Order.created_at)
+        .order_by(Order.created_at.desc())
         .options(
             selectinload(Order.order_items).selectinload(OrderItem.product),
             selectinload(Order.address),
             selectinload(Order.branch),
         )
     )
-    return session.execute(stmt).scalars().all()
+    orders = session.execute(stmt).scalars().all()
+    if not orders:
+        return []
+
+    order_ids = [o.id for o in orders]
+    transitions_stmt = (
+        select(OrderStatusTransition)
+        .where(OrderStatusTransition.order_id.in_(order_ids))
+        .order_by(OrderStatusTransition.created_at)
+    )
+    transitions_by_order: dict[int, list[OrderStatusTransition]] = {}
+    for t in session.execute(transitions_stmt).scalars().all():
+        transitions_by_order.setdefault(t.order_id, []).append(t)
+
+    result = []
+    for o in orders:
+        result.append(
+            CustomerOrderResponse(
+                id=o.id,
+                status=o.status,
+                total_price=o.total_price,
+                created_at=o.created_at,
+                branch_name=o.branch.name if o.branch else None,
+                branch_address=o.branch.address if o.branch else None,
+                address_name=o.address.location_name if o.address else None,
+                items=[
+                    CustomerOrderItem(
+                        id=item.id,
+                        product_id=item.product_id,
+                        product_name=item.product.name if item.product else "—",
+                        image_id=item.product.image_id if item.product else None,
+                        quantity=item.quantity,
+                        price=item.price,
+                    )
+                    for item in o.order_items
+                ],
+                status_history=[
+                    OrderStatusHistoryEntry(to_status=t.to_status, created_at=t.created_at)
+                    for t in transitions_by_order.get(o.id, [])
+                ],
+            )
+        )
+    return result
+
+
+@router.get("/admin/list", response_model=list[AdminOrderResponse])
+async def list_orders_admin(
+    session: db_dep,
+    current_user: current_user_dep,
+    status_filter: str | None = None,
+):
+    if not (current_user.is_staff or current_user.is_superuser):
+        raise HTTPException(status_code=403, detail="Staff access only")
+
+    stmt = (
+        select(Order)
+        .order_by(Order.created_at.desc())
+        .options(
+            selectinload(Order.user),
+            selectinload(Order.order_items).selectinload(OrderItem.product),
+            selectinload(Order.branch),
+        )
+    )
+    if status_filter:
+        stmt = stmt.where(Order.status == status_filter)
+
+    orders = session.execute(stmt).scalars().all()
+
+    result = []
+    for o in orders:
+        customer = o.user
+        name = (
+            f"{customer.first_name or ''} {customer.last_name or ''}".strip()
+            or customer.username
+            or customer.email
+            or "Guest"
+        )
+        contact = customer.phone or customer.email or "—"
+        items_summary = ", ".join(
+            item.product.name for item in o.order_items if item.product
+        )
+        result.append(
+            AdminOrderResponse(
+                id=o.id,
+                customer_name=name,
+                customer_contact=contact,
+                items_summary=items_summary or "—",
+                branch_address=o.branch.address if o.branch else None,
+                status=o.status,
+                total_price=o.total_price,
+                created_at=o.created_at,
+            )
+        )
+    return result
 
 
 @router.get("/{order_id}", response_model=OrderListResponse)
@@ -66,9 +162,16 @@ async def create_order(
     current_user: current_user_dep,
 ):
     address_stmt = select(Address).where(Address.user_id == current_user.id)
+    if create_data.address_id is not None:
+        address_stmt = address_stmt.where(Address.id == create_data.address_id)
     address = (session.execute(address_stmt)).scalars().first()
     if not address:
-        raise HTTPException(status_code=404, detail="Please add address first")
+        detail = (
+            "Address not found"
+            if create_data.address_id is not None
+            else "Please add address first"
+        )
+        raise HTTPException(status_code=404, detail=detail)
 
     cart_stmt = select(Cart).where(Cart.user_id == current_user.id)
     cart = (session.execute(cart_stmt)).scalars().first()

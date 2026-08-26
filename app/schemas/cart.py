@@ -31,6 +31,7 @@ class ProductBrief(BaseModel):
     name: str
     price: int
     description: str
+    image_id: int | None = None
 
     model_config = {"from_attributes": True}
 
@@ -55,7 +56,7 @@ class CartResponse(BaseModel):
     id: int
     user_id: int
     total_price: int = 0
-    items: list[CartItemResponse] = Field(alias="cart_items", default=[])
+    items: list[CartItemResponse] = Field(validation_alias="cart_items", default=[])
     created_at: datetime
     updated_at: datetime
 
