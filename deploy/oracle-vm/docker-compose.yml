@@ -1,0 +1,35 @@
+# Runs on the Oracle Cloud Always Free VM: just Redis (as the Celery
+# broker/backend) and the Celery worker itself. Everything else (API,
+# Postgres) stays on Render - this VM only needs to reach Render's Postgres
+# over the network and expose Redis for Render's API service to enqueue
+# tasks into.
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  celery:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.celery worker --loglevel=info
+
+volumes:
+  redis_data:

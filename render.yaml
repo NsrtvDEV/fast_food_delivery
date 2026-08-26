@@ -51,57 +51,8 @@ services:
         fromDatabase:
           name: foodify-db
           property: password
+      # Redis lives on a separately self-hosted VM (see /deploy/oracle-vm/),
+      # not on Render, since Render's free tier has no Background Worker or
+      # Key Value option - only this manually-entered connection string.
       - key: REDIS_URL
-        fromService:
-          name: foodify-redis
-          type: keyvalue
-          property: connectionString
-
-  - name: foodify-celery
-    type: worker
-    runtime: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    dockerContext: ./
-    dockerCommand: celery -A app.celery worker --loglevel=info
-    envVars:
-      - key: PROJECT_NAME
-        value: fast_food_delivery
-      - key: DEBUG
-        value: "0"
-      - key: BASE_URL
         sync: false
-      - key: SECRET_KEY
-        generateValue: true
-      - key: EMAIL_PASSWORD
-        sync: false
-      - key: DB_HOST
-        fromDatabase:
-          name: foodify-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: foodify-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: foodify-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: foodify-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: foodify-db
-          property: password
-      - key: REDIS_URL
-        fromService:
-          name: foodify-redis
-          type: keyvalue
-          property: connectionString
-
-  - name: foodify-redis
-    type: keyvalue
-    plan: free
-    ipAllowList: []
