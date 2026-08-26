@@ -1,16 +1,18 @@
 from pydantic import BaseModel
-from fastapi import Form
 
 
 class ProductListResponse(BaseModel):
     id: int
     category_id: int
     image_id: int | None = None
+    discount_id: int | None = None
     name: str
     description: str
     price: int
     final_price: int
     is_active: bool
+    average_rating: float | None = None
+    review_count: int = 0
 
     model_config = {
         "json_schema_extra": {
@@ -28,17 +30,10 @@ class ProductListResponse(BaseModel):
     }
 
 
-class ProductCreateRequest(BaseModel):
-    category_id: int = Form()
-    discount_id: int | None = None
-    name: str = Form()
-    description: str = Form()
-    price: int = Form()
-
-
 class ProductUpdateRequest(BaseModel):
     category_id: int | None = None
     image_id: int | None = None
+    discount_id: int | None = None
     name: str | None = None
     description: str | None = None
     price: int | None = None
