@@ -1,7 +1,7 @@
 import logging
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
@@ -31,7 +31,9 @@ def _send_email_safe(to_email: str, subject: str, body: str) -> None:
     response_model=UserRegisterResponse,
     dependencies=[Depends(rate_limiter("register", 5, 3600))],
 )
-async def register_user(session: db_dep, data: UserRegisterRequest):
+async def register_user(
+    session: db_dep, data: UserRegisterRequest, background_tasks: BackgroundTasks
+):
 
     stmt = select(User).where(User.email == data.email)
     existing = session.execute(stmt).scalars().first()
@@ -40,7 +42,8 @@ async def register_user(session: db_dep, data: UserRegisterRequest):
         # Respond exactly like a fresh registration so the API can't be used
         # to probe which emails are already registered. The account owner is
         # still informed — just through the inbox, not the HTTP response.
-        _send_email_safe(
+        background_tasks.add_task(
+            _send_email_safe,
             data.email,
             "Registration attempt",
             "Someone tried to register a new account with this email, but you "
@@ -71,8 +74,11 @@ async def register_user(session: db_dep, data: UserRegisterRequest):
     session.add(cart)
 
     secret_code = secrets.token_hex(8)
-    _send_email_safe(
-        data.email, "Email confirmation", f"Your confirmation code is: {secret_code}"
+    background_tasks.add_task(
+        _send_email_safe,
+        data.email,
+        "Email confirmation",
+        f"Your confirmation code is: {secret_code}",
     )
 
     redis_client.setex(secret_code, 120, user.email)
