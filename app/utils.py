@@ -70,7 +70,7 @@ def send_email(to_email: str, subject: str, body: str):
     msg["From"] = settings.EMAIL_ADDRESS
     msg["To"] = to_email
 
-    with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+    with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
         server.starttls()
         server.login(settings.EMAIL_ADDRESS, settings.EMAIL_PASSWORD)
         server.send_message(msg)

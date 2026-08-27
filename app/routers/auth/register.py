@@ -1,3 +1,4 @@
+import logging
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,6 +14,16 @@ from app.utils import hash_password, send_email, redis_client
 
 
 router = APIRouter(prefix="/register", tags=["Auth"])
+logger = logging.getLogger(__name__)
+
+
+def _send_email_safe(to_email: str, subject: str, body: str) -> None:
+    """Email delivery is best-effort: a slow/unreachable SMTP server should
+    never hang or fail the registration request itself."""
+    try:
+        send_email(to_email, subject, body)
+    except Exception:
+        logger.exception("Failed to send email to %s", to_email)
 
 
 @router.post(
@@ -29,7 +40,7 @@ async def register_user(session: db_dep, data: UserRegisterRequest):
         # Respond exactly like a fresh registration so the API can't be used
         # to probe which emails are already registered. The account owner is
         # still informed — just through the inbox, not the HTTP response.
-        send_email(
+        _send_email_safe(
             data.email,
             "Registration attempt",
             "Someone tried to register a new account with this email, but you "
@@ -60,7 +71,7 @@ async def register_user(session: db_dep, data: UserRegisterRequest):
     session.add(cart)
 
     secret_code = secrets.token_hex(8)
-    send_email(
+    _send_email_safe(
         data.email, "Email confirmation", f"Your confirmation code is: {secret_code}"
     )
 
