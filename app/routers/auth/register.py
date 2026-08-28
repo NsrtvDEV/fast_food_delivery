@@ -52,6 +52,7 @@ async def register_user(
         return JSONResponse(
             status_code=204,
             content={"message": "Email confirmation sent to your email."},
+            background=background_tasks,
         )
 
     stmt = select(User).limit(1)
@@ -91,7 +92,9 @@ async def register_user(
     session.commit()
 
     return JSONResponse(
-        status_code=204, content={"message": "Email confirmation sent to your email."}
+        status_code=204,
+        content={"message": "Email confirmation sent to your email."},
+        background=background_tasks,
     )
 
 
