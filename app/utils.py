@@ -1,4 +1,5 @@
 import redis
+import requests
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime, timezone, timedelta
@@ -65,6 +66,28 @@ def decode_jwt_token(token: str):
 
 
 def send_email(to_email: str, subject: str, body: str):
+    if settings.RESEND_API_KEY:
+        _send_email_resend(to_email, subject, body)
+    else:
+        _send_email_smtp(to_email, subject, body)
+
+
+def _send_email_resend(to_email: str, subject: str, body: str):
+    response = requests.post(
+        "https://api.resend.com/emails",
+        headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"},
+        json={
+            "from": settings.RESEND_FROM,
+            "to": [to_email],
+            "subject": subject,
+            "text": body,
+        },
+        timeout=10,
+    )
+    response.raise_for_status()
+
+
+def _send_email_smtp(to_email: str, subject: str, body: str):
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = settings.EMAIL_ADDRESS

@@ -25,6 +25,8 @@ services:
         generateValue: true
       - key: EMAIL_PASSWORD
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
       - key: SETUP_TOKEN
         sync: false
       - key: TELEGRAM_TOKEN
@@ -51,8 +53,8 @@ services:
         fromDatabase:
           name: foodify-db
           property: password
-      # Redis lives on a separately self-hosted VM (see /deploy/oracle-vm/),
-      # not on Render, since Render's free tier has no Background Worker or
-      # Key Value option - only this manually-entered connection string.
+      # Redis is a free managed instance (e.g. Upstash), not hosted on
+      # Render, since Render's free tier has no Background Worker or Key
+      # Value option - only this manually-entered connection string.
       - key: REDIS_URL
         sync: false

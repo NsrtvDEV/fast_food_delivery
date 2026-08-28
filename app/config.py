@@ -26,7 +26,13 @@ class Settings(BaseSettings):
     EMAIL_ADDRESS: str = "nsrtv123@gmail.com"
     SMTP_SERVER: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    EMAIL_PASSWORD: str
+    EMAIL_PASSWORD: str | None = None
+
+    # If set, email is sent via the Resend HTTP API instead of SMTP - needed
+    # on hosts (like Render's free tier) that block outbound SMTP ports.
+    RESEND_API_KEY: str | None = None
+    RESEND_FROM: str = "Foodify <onboarding@resend.dev>"
+
     REDIS_URL: str = "redis://localhost:6379/4"
 
     SETUP_TOKEN: str | None = None
