@@ -38,7 +38,7 @@ async def register_user(
     stmt = select(User).where(User.email == data.email)
     existing = session.execute(stmt).scalars().first()
 
-    if existing:
+    if existing and existing.is_active:
         # Respond exactly like a fresh registration so the API can't be used
         # to probe which emails are already registered. The account owner is
         # still informed — just through the inbox, not the HTTP response.
@@ -55,24 +55,39 @@ async def register_user(
             background=background_tasks,
         )
 
-    stmt = select(User).limit(1)
-    existing_user = session.execute(stmt).scalars().first()
-    is_first_user = existing_user is None
-    grant_superuser = (
-        is_first_user
-        and settings.SETUP_TOKEN is not None
-        and data.setup_token == settings.SETUP_TOKEN
-    )
+    if existing:
+        # A previous registration attempt never got verified (code expired,
+        # email never arrived, etc). Treat this as a retry: reuse the row
+        # and just issue a fresh code, instead of leaving the account
+        # permanently stuck with no way to ever get a new one.
+        user = existing
+        user.password_hash = hash_password(data.password)
+    else:
+        stmt = select(User).limit(1)
+        existing_user = session.execute(stmt).scalars().first()
+        is_first_user = existing_user is None
+        grant_superuser = (
+            is_first_user
+            and settings.SETUP_TOKEN is not None
+            and data.setup_token == settings.SETUP_TOKEN
+        )
 
-    user = User(
-        email=data.email, password_hash=hash_password(data.password), is_active=False
-    )
+        user = User(
+            email=data.email,
+            password_hash=hash_password(data.password),
+            is_active=False,
+        )
 
-    session.add(user)
-    session.flush()
+        session.add(user)
+        session.flush()
 
-    cart = Cart(user_id=user.id)
-    session.add(cart)
+        cart = Cart(user_id=user.id)
+        session.add(cart)
+
+        if grant_superuser:
+            user.is_active = True
+            user.is_staff = True
+            user.is_superuser = True
 
     secret_code = secrets.token_hex(8)
     background_tasks.add_task(
@@ -83,11 +98,6 @@ async def register_user(
     )
 
     redis_client.setex(secret_code, 120, user.email)
-
-    if grant_superuser:
-        user.is_active = True
-        user.is_staff = True
-        user.is_superuser = True
 
     session.commit()
 
