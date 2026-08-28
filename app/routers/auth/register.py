@@ -102,7 +102,7 @@ async def register_user(
     session.commit()
 
     return JSONResponse(
-        status_code=204,
+        status_code=200,
         content={"message": "Email confirmation sent to your email."},
         background=background_tasks,
     )
