@@ -35,6 +35,17 @@ class Settings(BaseSettings):
 
     REDIS_URL: str = "redis://localhost:6379/4"
 
+    # If set, uploaded product photos go to Cloudflare R2 instead of local
+    # disk - needed on hosts with an ephemeral filesystem (Render's free
+    # tier wipes local files on every restart). R2_PUBLIC_URL is the
+    # bucket's public base URL (r2.dev subdomain or a custom domain),
+    # without a trailing slash.
+    R2_ACCOUNT_ID: str | None = None
+    R2_ACCESS_KEY_ID: str | None = None
+    R2_SECRET_ACCESS_KEY: str | None = None
+    R2_BUCKET_NAME: str | None = None
+    R2_PUBLIC_URL: str | None = None
+
     SETUP_TOKEN: str | None = None
 
     TELEGRAM_TOKEN: str | None = None

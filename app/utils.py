@@ -1,8 +1,15 @@
-import redis
-import requests
+import logging
+import shutil
 import smtplib
+import uuid
 from email.mime.text import MIMEText
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
+import boto3
+import redis
+import requests
+from botocore.config import Config as BotoConfig
 from fastapi import HTTPException
 
 from passlib.context import CryptContext
@@ -12,6 +19,7 @@ from jose import JWTError, jwt
 from app.config import settings
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+logger = logging.getLogger(__name__)
 
 
 def generate_slug(title):
@@ -118,3 +126,58 @@ def calculate_discounted_price(price: int, discount) -> int:
         return price
 
     return max(0, int(discounted))
+
+
+def _r2_client():
+    return boto3.client(
+        "s3",
+        endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+        config=BotoConfig(signature_version="s3v4"),
+        region_name="auto",
+    )
+
+
+def save_uploaded_image(file_obj, filename: str, content_type: str) -> str:
+    """Save an uploaded image and return a URL/path to fetch it back by.
+
+    Uploads to Cloudflare R2 (returning its public URL) when configured -
+    needed on hosts with an ephemeral filesystem, like Render's free tier,
+    which wipes local files on every restart. Falls back to local disk
+    (returning a relative path) when R2 isn't configured, for local dev.
+    """
+    safe_filename = f"{uuid.uuid4().hex}{Path(filename).suffix}"
+
+    if settings.R2_ACCOUNT_ID and settings.R2_BUCKET_NAME:
+        _r2_client().upload_fileobj(
+            file_obj,
+            settings.R2_BUCKET_NAME,
+            safe_filename,
+            ExtraArgs={"ContentType": content_type},
+        )
+        return f"{settings.R2_PUBLIC_URL}/{safe_filename}"
+
+    path = Path(settings.MEDIA_PATH)
+    path.mkdir(exist_ok=True)
+    dest = path / safe_filename
+    with open(dest, "wb") as buffer:
+        shutil.copyfileobj(file_obj, buffer)
+    return str(dest)
+
+
+def delete_uploaded_image(url: str) -> None:
+    """Counterpart to save_uploaded_image - deletes from R2 or local disk
+    depending on which one the given url/path came from."""
+    if url.startswith("http://") or url.startswith("https://"):
+        if settings.R2_ACCOUNT_ID and settings.R2_BUCKET_NAME:
+            key = url.rsplit("/", 1)[-1]
+            try:
+                _r2_client().delete_object(Bucket=settings.R2_BUCKET_NAME, Key=key)
+            except Exception:
+                logger.exception("Failed to delete R2 object %s", key)
+        return
+
+    path = Path(url)
+    if path.exists():
+        path.unlink()

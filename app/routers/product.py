@@ -1,11 +1,8 @@
-import uuid
-
 from fastapi import APIRouter, HTTPException, UploadFile, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from pathlib import Path
-import shutil
 from typing import Annotated
 
 from app.models import Product, Image, Review
@@ -16,8 +13,7 @@ from app.schemas.product import (
     ProductCreateResponse,
 )
 from app.dependencies import current_user_dep
-from app.config import settings
-from app.utils import calculate_discounted_price
+from app.utils import calculate_discounted_price, save_uploaded_image, delete_uploaded_image
 
 
 router = APIRouter(prefix="/products", tags=["Products"])
@@ -92,7 +88,11 @@ async def get_product_image(session: db_dep, image_id: int):
     stmt = select(Image).where(Image.id == image_id)
     res = session.execute(stmt)
     image = res.scalars().first()
-    if not image or not Path(image.url).exists():
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    if image.url.startswith("http://") or image.url.startswith("https://"):
+        return RedirectResponse(image.url)
+    if not Path(image.url).exists():
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(image.url)
 
@@ -141,17 +141,9 @@ async def create_product(
             status_code=400, detail="File size exceeds the limit of 5MB."
         )
 
-    path = Path(settings.MEDIA_PATH)
-    path.mkdir(exist_ok=True)
-    safe_filename = f"{uuid.uuid4().hex}{Path(image.filename).suffix}"
-    res = path / safe_filename
+    image_url = save_uploaded_image(image.file, image.filename, image.content_type)
     try:
-        with open(res, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-
-        image_obj = Image(
-            url=f"{settings.MEDIA_PATH}/{safe_filename}",
-        )
+        image_obj = Image(url=image_url)
 
         session.add(image_obj)
         session.flush()
@@ -172,8 +164,7 @@ async def create_product(
         return product
 
     except Exception:
-        if res.exists():
-            res.unlink()
+        delete_uploaded_image(image_url)
         session.rollback()
         raise HTTPException(status_code=500, detail="Failed to create product")
 
@@ -245,17 +236,11 @@ async def update_product_image(
             status_code=400, detail="File size exceeds the limit of 5MB."
         )
 
-    path = Path(settings.MEDIA_PATH)
-    path.mkdir(exist_ok=True)
-    safe_filename = f"{uuid.uuid4().hex}{Path(image.filename).suffix}"
-    new_path = path / safe_filename
+    image_url = save_uploaded_image(image.file, image.filename, image.content_type)
 
     old_image_id = product.image_id
     try:
-        with open(new_path, "wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-
-        new_image = Image(url=f"{settings.MEDIA_PATH}/{safe_filename}")
+        new_image = Image(url=image_url)
         session.add(new_image)
         session.flush()
 
@@ -263,8 +248,7 @@ async def update_product_image(
         session.commit()
         session.refresh(product)
     except Exception:
-        if new_path.exists():
-            new_path.unlink()
+        delete_uploaded_image(image_url)
         session.rollback()
         raise HTTPException(status_code=500, detail="Failed to update product image")
 
@@ -277,11 +261,10 @@ async def update_product_image(
             select(Image).where(Image.id == old_image_id)
         ).scalars().first()
         if old_image:
-            old_path = Path(old_image.url)
+            old_image_url = old_image.url
             session.delete(old_image)
             session.commit()
-            if old_path.exists():
-                old_path.unlink()
+            delete_uploaded_image(old_image_url)
 
     rating_map = _rating_map(session, [product.id])
     return _to_list_response(product, rating_map)
