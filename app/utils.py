@@ -128,35 +128,36 @@ def calculate_discounted_price(price: int, discount) -> int:
     return max(0, int(discounted))
 
 
-def _r2_client():
+def _s3_client():
     return boto3.client(
         "s3",
-        endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
-        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+        endpoint_url=settings.S3_ENDPOINT_URL,
+        aws_access_key_id=settings.S3_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
         config=BotoConfig(signature_version="s3v4"),
-        region_name="auto",
+        region_name=settings.S3_REGION,
     )
 
 
 def save_uploaded_image(file_obj, filename: str, content_type: str) -> str:
     """Save an uploaded image and return a URL/path to fetch it back by.
 
-    Uploads to Cloudflare R2 (returning its public URL) when configured -
-    needed on hosts with an ephemeral filesystem, like Render's free tier,
-    which wipes local files on every restart. Falls back to local disk
-    (returning a relative path) when R2 isn't configured, for local dev.
+    Uploads to S3-compatible object storage (Supabase Storage, Cloudflare
+    R2, etc; returning its public URL) when configured - needed on hosts
+    with an ephemeral filesystem, like Render's free tier, which wipes
+    local files on every restart. Falls back to local disk (returning a
+    relative path) when that isn't configured, for local dev.
     """
     safe_filename = f"{uuid.uuid4().hex}{Path(filename).suffix}"
 
-    if settings.R2_ACCOUNT_ID and settings.R2_BUCKET_NAME:
-        _r2_client().upload_fileobj(
+    if settings.S3_ENDPOINT_URL and settings.S3_BUCKET_NAME:
+        _s3_client().upload_fileobj(
             file_obj,
-            settings.R2_BUCKET_NAME,
+            settings.S3_BUCKET_NAME,
             safe_filename,
             ExtraArgs={"ContentType": content_type},
         )
-        return f"{settings.R2_PUBLIC_URL}/{safe_filename}"
+        return f"{settings.S3_PUBLIC_URL}/{safe_filename}"
 
     path = Path(settings.MEDIA_PATH)
     path.mkdir(exist_ok=True)
@@ -167,15 +168,15 @@ def save_uploaded_image(file_obj, filename: str, content_type: str) -> str:
 
 
 def delete_uploaded_image(url: str) -> None:
-    """Counterpart to save_uploaded_image - deletes from R2 or local disk
-    depending on which one the given url/path came from."""
+    """Counterpart to save_uploaded_image - deletes from object storage or
+    local disk depending on which one the given url/path came from."""
     if url.startswith("http://") or url.startswith("https://"):
-        if settings.R2_ACCOUNT_ID and settings.R2_BUCKET_NAME:
+        if settings.S3_ENDPOINT_URL and settings.S3_BUCKET_NAME:
             key = url.rsplit("/", 1)[-1]
             try:
-                _r2_client().delete_object(Bucket=settings.R2_BUCKET_NAME, Key=key)
+                _s3_client().delete_object(Bucket=settings.S3_BUCKET_NAME, Key=key)
             except Exception:
-                logger.exception("Failed to delete R2 object %s", key)
+                logger.exception("Failed to delete object storage file %s", key)
         return
 
     path = Path(url)

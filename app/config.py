@@ -35,16 +35,19 @@ class Settings(BaseSettings):
 
     REDIS_URL: str = "redis://localhost:6379/4"
 
-    # If set, uploaded product photos go to Cloudflare R2 instead of local
-    # disk - needed on hosts with an ephemeral filesystem (Render's free
-    # tier wipes local files on every restart). R2_PUBLIC_URL is the
-    # bucket's public base URL (r2.dev subdomain or a custom domain),
-    # without a trailing slash.
-    R2_ACCOUNT_ID: str | None = None
-    R2_ACCESS_KEY_ID: str | None = None
-    R2_SECRET_ACCESS_KEY: str | None = None
-    R2_BUCKET_NAME: str | None = None
-    R2_PUBLIC_URL: str | None = None
+    # If set, uploaded product photos go to S3-compatible object storage
+    # (Supabase Storage, Cloudflare R2, etc.) instead of local disk - needed
+    # on hosts with an ephemeral filesystem (Render's free tier wipes local
+    # files on every restart). S3_PUBLIC_URL is the base URL each uploaded
+    # file's name gets appended to, without a trailing slash - for Supabase
+    # that's https://<project-ref>.supabase.co/storage/v1/object/public/<bucket>,
+    # for R2 it's the bucket's r2.dev URL or a custom domain.
+    S3_ENDPOINT_URL: str | None = None
+    S3_ACCESS_KEY_ID: str | None = None
+    S3_SECRET_ACCESS_KEY: str | None = None
+    S3_BUCKET_NAME: str | None = None
+    S3_REGION: str = "auto"
+    S3_PUBLIC_URL: str | None = None
 
     SETUP_TOKEN: str | None = None
 
