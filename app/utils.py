@@ -107,7 +107,9 @@ def _send_email_smtp(to_email: str, subject: str, body: str):
         server.send_message(msg)
 
 
-redis_client = redis.from_url(settings.REDIS_URL)
+redis_client = redis.from_url(
+    settings.REDIS_URL, socket_connect_timeout=5, socket_timeout=5
+)
 
 
 def calculate_discounted_price(price: int, discount) -> int:
